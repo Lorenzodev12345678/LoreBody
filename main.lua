@@ -14,6 +14,8 @@ local player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local speedEnabled = false
 local speedValue = 2.0
+local visualSpeedEnabled = false
+local visualSpeedValue = 50 -- O quanto você vê de velocidade
 
 -- [[ 🛡️ ABA DE PROTEÇÃO (ANTI-CHEAT) ]] --
 local TabProt = Window:CreateTab("🛡️ Proteção", 4483345998)
@@ -44,17 +46,44 @@ TabProt:CreateButton({
 local TabSpeed = Window:CreateTab("⚡ Movimento", 4483345998)
 
 TabSpeed:CreateToggle({
-   Name = "Speed Bypass (CFrame)",
-   Info = "Ande rápido sem que o script do jogo perceba",
+   Name = "Velocidade Visível (Client)",
+   Info = "Aumenta o WalkSpeed apenas para você ver (Cuidado: Desativa ao usar Bypass)",
    CurrentValue = false,
    Callback = function(Value)
-       speedEnabled = Value
+       visualSpeedEnabled = Value
    end,
 })
 
 TabSpeed:CreateSlider({
-   Name = "Intensidade",
-   Info = "Ajuste o multiplicador da sua velocidade",
+   Name = "Intensidade Visível",
+   Range = {16, 150},
+   Increment = 1,
+   CurrentValue = 50,
+   Callback = function(v)
+       visualSpeedValue = v
+   end,
+})
+
+TabSpeed:CreateSection("--- Bypass ---")
+
+TabSpeed:CreateToggle({
+   Name = "Speed Bypass (CFrame)",
+   Info = "Oculta o Speed dos outros mas você ganha a velocidade real",
+   CurrentValue = false,
+   Callback = function(Value)
+       speedEnabled = Value
+       
+       -- Lógica que você pediu, man: Se ativar o Bypass, o WalkSpeed visual reseta
+       if speedEnabled then
+           local hum = player.Character and player.Character:FindFirstChild("Humanoid")
+           if hum then hum.WalkSpeed = 16 end
+       end
+   end,
+})
+
+TabSpeed:CreateSlider({
+   Name = "Intensidade Bypass",
+   Info = "Multiplicador do ganho real",
    Range = {1, 20},
    Increment = 0.5,
    CurrentValue = 2,
@@ -63,13 +92,25 @@ TabSpeed:CreateSlider({
    end,
 })
 
--- LÓGICA DE MOVIMENTO
+-- LÓGICA DE MOVIMENTO (HEARTBEAT PARA FICAR SMOOTH)
 RunService.Stepped:Connect(function()
-    if speedEnabled and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = player.Character.HumanoidRootPart
+    if player.Character and player.Character:FindFirstChild("Humanoid") then
         local hum = player.Character.Humanoid
-        if hum.MoveDirection.Magnitude > 0 then
-            hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (speedValue / 10))
+        local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+
+        -- Se o Bypass estiver ON, ganha velocidade via CFrame e mantém WalkSpeed em 16
+        if speedEnabled and hrp then
+            if hum.MoveDirection.Magnitude > 0 then
+                hrp.CFrame = hrp.CFrame + (hum.MoveDirection * (speedValue / 10))
+            end
+            hum.WalkSpeed = 16 -- Garante que pros outros você tá normal
+        
+        -- Se só o Visual estiver ON, muda o WalkSpeed
+        elseif visualSpeedEnabled then
+            hum.WalkSpeed = visualSpeedValue
+        else
+            -- Reset padrão se nada estiver ativo
+            hum.WalkSpeed = 16
         end
     end
 end)
