@@ -1,6 +1,6 @@
 -- [[ LoreBody Hub 💎 ]] --
 -- [[ by LoreTcs - The Heart of Scripting ]] --
--- [[ Version: 2.0 (Anti-Detection) ]] --
+-- [[ Version: 2.0 (TPS Street Soccer Edition) ]] --
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -16,23 +16,23 @@ local player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
 local camera = game.Workspace.CurrentCamera
 local speedEnabled = false
-local speedValue = 2.0
+local speedValue = 1.4 -- 14 no seu multiplicador (ajustado para o cálculo do script)
 local ultraVisualEnabled = false
 local defaultFOV = 70
+local alvoGol = nil
 
--- [[ 🛡️ ABA DE PROTEÇÃO (ANTI-CHEAT) ]] --
+-- [[ 🛡️ ABA DE PROTEÇÃO ]] --
 local TabProt = Window:CreateTab("🛡️ Proteção", 4483345998)
 
 TabProt:CreateButton({
    Name = "Ativar Blindagem LoreBody",
-   Info = "Esconde sua velocidade real e evita Kick",
+   Info = "Evita Kick no TPS e esconde os 50 de Speed!",
    Callback = function()
        local mt = getrawmetatable(game)
        local oldIndex = mt.__index
        local oldNewIndex = mt.__newindex
        setreadonly(mt, false)
 
-       -- Bloqueia o jogo de ler sua velocidade real
        mt.__index = newcclosure(function(t, k)
            if not checkcaller() and t:IsA("Humanoid") and (k == "WalkSpeed" or k == "JumpPower") then
                return (k == "WalkSpeed" and 16 or 50)
@@ -40,7 +40,6 @@ TabProt:CreateButton({
            return oldIndex(t, k)
        end)
        
-       -- Bloqueia o jogo de resetar sua velocidade
        mt.__newindex = newcclosure(function(t, k, v)
            if not checkcaller() and t:IsA("Humanoid") and k == "WalkSpeed" and speedEnabled then
                return 
@@ -48,113 +47,102 @@ TabProt:CreateButton({
            return oldNewIndex(t, k, v)
        end)
 
-       hookfunction(player.Kick, newcclosure(function() return nil end))
+       pcall(function() hookfunction(player.Kick, newcclosure(function() return nil end)) end)
        setreadonly(mt, true)
-       
-       Rayfield:Notify({Title = "LoreBody Shield", Content = "Blindagem injetada, rlk!", Duration = 5})
+       Rayfield:Notify({Title = "LoreBody Shield", Content = "Blindagem Injetada, rlk!", Duration = 5})
    end,
 })
 
 -- [[ ⚡ ABA DE MOVIMENTAÇÃO ]] --
 local TabSpeed = Window:CreateTab("⚡ Movimento", 4483345998)
 
-TabSpeed:CreateToggle({
-   Name = "Ultra Visual (FOV)",
-   Info = "Dá efeito de velocidade extrema na tela!",
-   CurrentValue = false,
-   Callback = function(Value)
-       ultraVisualEnabled = Value
-       if not Value then
-           camera.FieldOfView = defaultFOV
+TabSpeed:CreateSlider({
+   Name = "WalkSpeed Físico (Padrão 50)",
+   Info = "Aumenta a força do chute na bola TPS!",
+   Range = {16, 100},
+   Increment = 1,
+   CurrentValue = 50,
+   Callback = function(v)
+       if player.Character and player.Character:FindFirstChild("Humanoid") then
+           player.Character.Humanoid.WalkSpeed = v
        end
    end,
 })
 
-TabSpeed:CreateSection("--- Bypass (Oculto/Bugado) ---")
+TabSpeed:CreateSection("--- Bypass (Bugar Zagueiros) ---")
 
 TabSpeed:CreateToggle({
    Name = "Speed Bypass (CFrame)",
-   Info = "Você fica rápido, mas pros outros você buga/trava.",
    CurrentValue = false,
-   Callback = function(Value)
-       speedEnabled = Value
-   end,
+   Callback = function(Value) speedEnabled = Value end,
 })
 
 TabSpeed:CreateSlider({
-   Name = "Intensidade Bypass",
-   Info = "Multiplicador de deslize",
-   Range = {0.1, 10},
+   Name = "Intensidade Bypass (Seu 14)",
+   Range = {0.1, 5},
    Increment = 0.1,
-   CurrentValue = 2,
-   Callback = function(v)
-       speedValue = v
+   CurrentValue = 1.4,
+   Callback = function(v) speedValue = v end,
+})
+
+-- [[ 🤡 ABA TROLL (TPS SOCCER) ]] --
+local TabTroll = Window:CreateTab("🤡 Troll", 4483345998)
+
+TabTroll:CreateButton({
+   Name = "Marcar Gol como Alvo",
+   Info = "Fique dentro do gol deles e clique!",
+   Callback = function()
+       local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+       if hrp then
+           alvoGol = hrp.Position
+           Rayfield:Notify({Title = "LoreBody", Content = "Mira calibrada pro gol!", Duration = 3})
+       end
    end,
 })
 
--- LÓGICA DE MOVIMENTO CORE
-RunService.Heartbeat:Connect(function(deltaTime)
+TabTroll:CreateToggle({
+   Name = "Auto-TPS Direcionado",
+   Info = "Chuta a bola TPS direto pro alvo!",
+   CurrentValue = false,
+   Callback = function(Value)
+       _G.AutoTPSAlvo = Value
+       while _G.AutoTPSAlvo do
+           local ball = game.Workspace:FindFirstChild("TPS") or game.Workspace:FindFirstChild("Ball")
+           local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+           if ball and hrp and (hrp.Position - ball.Position).Magnitude < 15 then
+               firetouchinterest(hrp, ball, 0)
+               task.wait(0.01)
+               firetouchinterest(hrp, ball, 1)
+               if alvoGol then
+                   local dir = (alvoGol - ball.Position).Unit
+                   pcall(function() ball.Velocity = dir * 150 end)
+               end
+           end
+           task.wait(0.1)
+       end
+   end,
+})
+
+-- [[ 👤 ABA PLAYER ]] --
+local TabPlayer = Window:CreateTab("👤 Player", 4483345998)
+local execName, execVer = identifyexecutor()
+
+TabPlayer:CreateParagraph({Title = "Username:", Content = player.Name})
+TabPlayer:CreateParagraph({Title = "Executor:", Content = execName .. " " .. (execVer or "")})
+TabPlayer:CreateButton({Name = "Rejoin", Callback = function() game:GetService("TeleportService"):Teleport(game.PlaceId, player) end})
+
+-- LÓGICA CORE
+RunService.Heartbeat:Connect(function(dt)
     pcall(function()
         if player.Character and player.Character:FindFirstChild("Humanoid") then
             local hum = player.Character.Humanoid
-            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            local hrp = player.Character.HumanoidRootPart
 
-            -- Efeito Visual (FOV)
-            if ultraVisualEnabled and hum.MoveDirection.Magnitude > 0 then
-                camera.FieldOfView = math.lerp(camera.FieldOfView, 120, deltaTime * 5)
-            else
-                camera.FieldOfView = math.lerp(camera.FieldOfView, defaultFOV, deltaTime * 5)
-            end
-
-            -- Movimento CFrame
-            if speedEnabled and hrp and hum.MoveDirection.Magnitude > 0 then
-                hrp.CFrame = hrp.CFrame + (hum.MoveDirection * speedValue * deltaTime * 10)
-                hum.WalkSpeed = 16 -- Mantém 16 pro server não ver
+            if speedEnabled and hum.MoveDirection.Magnitude > 0 then
+                hrp.CFrame = hrp.CFrame + (hum.MoveDirection * speedValue * dt * 10)
             end
         end
     end)
 end)
 
-Rayfield:Notify({
-   Title = "LoreBody Atualizado!",
-   Content = "Visual e Bypass carregados, man!",
-   Duration = 5,
-})-- [[ 👤 ABA DO JOGADOR ]] --
-local TabPlayer = Window:CreateTab("👤 Player", 4483345998)
-
--- Identifica o Executor (Delta ou outro)
-local executorName, executorVersion = identifyexecutor()
-local finalExecutor = executorName .. " " .. (executorVersion or "")
-
-TabPlayer:CreateSection("--- Suas Informações ---")
-
--- Mostra seu Nome de Usuário
-TabPlayer:CreateParagraph({
-    Title = "Username:", 
-    Content = "➔ " .. player.Name .. " (@" .. player.DisplayName .. ")"
-})
-
--- Mostra o Executor que você está usando (Delta)
-TabPlayer:CreateParagraph({
-    Title = "Executor Ativo:", 
-    Content = "➔ " .. finalExecutor
-})
-
-TabPlayer:CreateSection("--- Atalhos Rápidos ---")
-
-TabPlayer:CreateButton({
-   Name = "Reentrar no Servidor (Rejoin)",
-   Callback = function()
-       local ts = game:GetService("TeleportService")
-       ts:Teleport(game.PlaceId, player)
-   end,
-})
-
-TabPlayer:CreateButton({
-   Name = "Copiar Link do Delta (Oficial)",
-   Callback = function()
-       setclipboard("https://deltaexploits.gg")
-       Rayfield:Notify({Title = "LoreBody", Content = "Link copiado, rlk!", Duration = 5})
-   end,
-})
-
+Rayfield:Notify({Title = "LoreBody VIP", Content = "Pronto pra humilhar no TPS, rlk!", Duration = 5})
