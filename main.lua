@@ -1,4 +1,6 @@
--- [[ LoreBody Hub 💎 - O Coração da LoreTcs ]] --
+-- [[ LoreBody Hub 💎 ]] --
+-- [[ by LoreTcs - The Heart of Scripting ]] --
+-- [[ Version: 2.0 (Anti-Detection) ]] --
 
 local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
@@ -12,10 +14,11 @@ local Window = Rayfield:CreateWindow({
 -- VARIAVEIS
 local player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
+local camera = game.Workspace.CurrentCamera
 local speedEnabled = false
 local speedValue = 2.0
-local visualSpeedEnabled = false
-local visualSpeedValue = 50 
+local ultraVisualEnabled = false
+local defaultFOV = 70
 
 -- [[ 🛡️ ABA DE PROTEÇÃO (ANTI-CHEAT) ]] --
 local TabProt = Window:CreateTab("🛡️ Proteção", 4483345998)
@@ -37,10 +40,10 @@ TabProt:CreateButton({
            return oldIndex(t, k)
        end)
        
-       -- Bloqueia o jogo de resetar sua velocidade (Conserta o Visual Speed)
+       -- Bloqueia o jogo de resetar sua velocidade
        mt.__newindex = newcclosure(function(t, k, v)
-           if not checkcaller() and t:IsA("Humanoid") and k == "WalkSpeed" and (visualSpeedEnabled or speedEnabled) then
-               return -- Ignora a tentativa do jogo de mudar sua velocidade
+           if not checkcaller() and t:IsA("Humanoid") and k == "WalkSpeed" and speedEnabled then
+               return 
            end
            return oldNewIndex(t, k, v)
        end)
@@ -56,33 +59,25 @@ TabProt:CreateButton({
 local TabSpeed = Window:CreateTab("⚡ Movimento", 4483345998)
 
 TabSpeed:CreateToggle({
-   Name = "Velocidade Visível (Forçar)",
-   Info = "Muda o WalkSpeed direto (Pode dar ban em jogos com AC forte)",
+   Name = "Ultra Visual (FOV)",
+   Info = "Dá efeito de velocidade extrema na tela!",
    CurrentValue = false,
    Callback = function(Value)
-       visualSpeedEnabled = Value
+       ultraVisualEnabled = Value
+       if not Value then
+           camera.FieldOfView = defaultFOV
+       end
    end,
 })
 
-TabSpeed:CreateSlider({
-   Name = "Intensidade Visível",
-   Range = {16, 150},
-   Increment = 1,
-   CurrentValue = 50,
-   Callback = function(v)
-       visualSpeedValue = v
-   end,
-})
-
-TabSpeed:CreateSection("--- Bypass (Oculto) ---")
+TabSpeed:CreateSection("--- Bypass (Oculto/Bugado) ---")
 
 TabSpeed:CreateToggle({
    Name = "Speed Bypass (CFrame)",
-   Info = "Ninguém vê que você está rápido. Use com moderação!",
+   Info = "Você fica rápido, mas pros outros você buga/trava.",
    CurrentValue = false,
    Callback = function(Value)
        speedEnabled = Value
-       if speedEnabled then visualSpeedEnabled = false end -- Desliga o visual pra não bugar
    end,
 })
 
@@ -104,18 +99,17 @@ RunService.Heartbeat:Connect(function(deltaTime)
             local hum = player.Character.Humanoid
             local hrp = player.Character:FindFirstChild("HumanoidRootPart")
 
-            if speedEnabled and hrp and hum.MoveDirection.Magnitude > 0 then
-                -- Bypass via CFrame (Calculado por deltaTime pra ficar liso em qualquer PC)
-                hrp.CFrame = hrp.CFrame + (hum.MoveDirection * speedValue * deltaTime * 10)
-                hum.WalkSpeed = 16
-            elseif visualSpeedEnabled then
-                -- Força o valor toda hora pra o jogo não resetar
-                hum.WalkSpeed = visualSpeedValue
+            -- Efeito Visual (FOV)
+            if ultraVisualEnabled and hum.MoveDirection.Magnitude > 0 then
+                camera.FieldOfView = math.lerp(camera.FieldOfView, 120, deltaTime * 5)
             else
-                -- Se nada estiver ativo, volta ao normal
-                if hum.WalkSpeed ~= 16 and not (speedEnabled or visualSpeedEnabled) then
-                    hum.WalkSpeed = 16
-                end
+                camera.FieldOfView = math.lerp(camera.FieldOfView, defaultFOV, deltaTime * 5)
+            end
+
+            -- Movimento CFrame
+            if speedEnabled and hrp and hum.MoveDirection.Magnitude > 0 then
+                hrp.CFrame = hrp.CFrame + (hum.MoveDirection * speedValue * deltaTime * 10)
+                hum.WalkSpeed = 16 -- Mantém 16 pro server não ver
             end
         end
     end)
@@ -123,7 +117,44 @@ end)
 
 Rayfield:Notify({
    Title = "LoreBody Atualizado!",
-   Content = "Visual corrigido e Bypass liso, man!",
+   Content = "Visual e Bypass carregados, man!",
    Duration = 5,
-   Image = 4483345998,
+})-- [[ 👤 ABA DO JOGADOR ]] --
+local TabPlayer = Window:CreateTab("👤 Player", 4483345998)
+
+-- Identifica o Executor (Delta ou outro)
+local executorName, executorVersion = identifyexecutor()
+local finalExecutor = executorName .. " " .. (executorVersion or "")
+
+TabPlayer:CreateSection("--- Suas Informações ---")
+
+-- Mostra seu Nome de Usuário
+TabPlayer:CreateParagraph({
+    Title = "Username:", 
+    Content = "➔ " .. player.Name .. " (@" .. player.DisplayName .. ")"
 })
+
+-- Mostra o Executor que você está usando (Delta)
+TabPlayer:CreateParagraph({
+    Title = "Executor Ativo:", 
+    Content = "➔ " .. finalExecutor
+})
+
+TabPlayer:CreateSection("--- Atalhos Rápidos ---")
+
+TabPlayer:CreateButton({
+   Name = "Reentrar no Servidor (Rejoin)",
+   Callback = function()
+       local ts = game:GetService("TeleportService")
+       ts:Teleport(game.PlaceId, player)
+   end,
+})
+
+TabPlayer:CreateButton({
+   Name = "Copiar Link do Delta (Oficial)",
+   Callback = function()
+       setclipboard("https://deltaexploits.gg")
+       Rayfield:Notify({Title = "LoreBody", Content = "Link copiado, rlk!", Duration = 5})
+   end,
+})
+
